@@ -8,7 +8,7 @@ import os
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-
+ 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "handcuffs.json")
 app = FastAPI(title="handcuff-service")
 
@@ -51,8 +51,7 @@ def list_handcuffs(team: Optional[str] = None, position: Optional[str] = None):
 def get_handcuff_for_starter(starter_player_id: str):
     """
     The core lookup: 'if this starter is out, who benefits.'
-    Returns 404 if no curated entry exists yet, callers should treat
-    that as 'no known handcuff,' not as an empty/safe answer.
+    Returns 404 if no curated entry exists yet.
     """
     entries = _load()
     matches = [e for e in entries if e["starter_player_id"] == starter_player_id]
@@ -61,9 +60,27 @@ def get_handcuff_for_starter(starter_player_id: str):
     return matches
 
 
+@app.get("/handcuffs/by-backup/{backup_player_id}")
+def get_handcuff_for_backup(backup_player_id: str):
+    """
+    The reverse lookup: 'is this player anyone's curated backup.'
+    Used by scoring-engine to check whether a trending player is trending
+    because their starter might be out, vs. just generic noise.
+    Returns 404 if this player isn't curated as anyone's backup yet.
+    """
+    entries = _load()
+    matches = [e for e in entries if e["backup_player_id"] == backup_player_id]
+    if not matches:
+        raise HTTPException(status_code=404, detail="This player is not a curated backup for anyone")
+    return matches
+ 
+
 @app.post("/handcuffs")
 def upsert_handcuff(entry: HandcuffEntry):
-    """Add or update a handcuff entry, keyed on (starter_player_id, backup_player_id)."""
+    """
+    Add or update a handcuff entry, keyed on (starter_player_id, backup_player_id).
+    Lets you curate via API calls instead of hand-editing JSON forever.
+    """
     entries = _load()
     key = (entry.starter_player_id, entry.backup_player_id)
     entries = [
@@ -75,6 +92,24 @@ def upsert_handcuff(entry: HandcuffEntry):
     return entry
 
 
+@app.delete("/handcuffs/{starter_player_id}/{backup_player_id}")
+def delete_handcuff(starter_player_id: str, backup_player_id: str):
+    """
+    Remove a specific handcuff entry by its (starter, backup) key.
+    Use this to retire stale/placeholder entries instead of hand-editing JSON.
+    """
+    entries = _load()
+    key = (starter_player_id, backup_player_id)
+    remaining = [
+        e for e in entries
+        if (e["starter_player_id"], e["backup_player_id"]) != key
+    ]
+    if len(remaining) == len(entries):
+        raise HTTPException(status_code=404, detail="No matching handcuff entry found")
+    _save(remaining)
+    return {"deleted": True, "starter_player_id": starter_player_id, "backup_player_id": backup_player_id}
+
+ 
 @app.get("/health")
 def health():
     return {"status": "ok", "entry_count": len(_load())}

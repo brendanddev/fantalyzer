@@ -30,6 +30,7 @@ def init_schema():
                 CREATE TABLE IF NOT EXISTS raw_events (
                     id SERIAL PRIMARY KEY,
                     source TEXT NOT NULL,
+                    league_id TEXT,
                     player_id TEXT,
                     player_name TEXT,
                     team TEXT,
@@ -65,12 +66,13 @@ def insert_raw_event(event: dict) -> int:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO raw_events (source, player_id, player_name, team, payload)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO raw_events (source, league_id, player_id, player_name, team, payload)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id;
                 """,
                 (
                     event["source"],
+                    event.get("league_id"),
                     event.get("player_id"),
                     event.get("player_name"),
                     event.get("team"),

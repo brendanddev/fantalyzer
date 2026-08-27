@@ -7,7 +7,7 @@ import os
 import sys
 import time
 import schedule
-from shared.config import SLEEPER_LEAGUE_ID as LEAGUE_ID
+from shared.config import SLEEPER_LEAGUES
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../"))
 
@@ -32,16 +32,16 @@ def poll_trending():
 
 
 def poll_rosters():
-    if not LEAGUE_ID:
-        return
-    rosters = client.get_rosters(LEAGUE_ID)
-    if not rosters:
-        return
-    insert_raw_event({
-        "source": SourceType.SLEEPER_ROSTER.value,
-        "payload": {"rosters": rosters},
-    })
-    print(f"[ingest-sleeper] polled rosters: {len(rosters)} teams")
+    for league_name, league_id in SLEEPER_LEAGUES.items():
+        rosters = client.get_rosters(league_id)
+        if not rosters:
+            continue
+        insert_raw_event({
+            "source": SourceType.SLEEPER_ROSTER.value,
+            "league_id": league_id,
+            "payload": {"league_name": league_name, "rosters": rosters},
+        })
+        print(f"[ingest-sleeper] polled rosters for {league_name}: {len(rosters)} teams")
 
 
 def poll_players():

@@ -24,6 +24,7 @@ class RawEvent(BaseModel):
     """
     id: Optional[int] = None
     source: SourceType
+    league_id: Optional[str] = None
     player_id: Optional[str] = None
     player_name: Optional[str] = None
     team: Optional[str] = None

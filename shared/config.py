@@ -13,4 +13,11 @@ DATABASE_URL = get_env(
     default="postgresql://fantalyzer:fantalyzer@localhost:5432/fantalyzer",
 )
 
-SLEEPER_LEAGUE_ID = get_env("SLEEPER_LEAGUE_ID")
+_raw_leagues = get_env("SLEEPER_LEAGUES", default="")
+SLEEPER_LEAGUES = {}
+for entry in _raw_leagues.split(","):
+    entry = entry.strip()
+    if not entry:
+        continue
+    name, league_id = entry.split(":", 1)
+    SLEEPER_LEAGUES[name.strip()] = league_id.strip()

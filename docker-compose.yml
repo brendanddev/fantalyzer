@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+
+  ### Database
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fantalyzer
+      POSTGRES_PASSWORD: fantalyzer
+      POSTGRES_DB: fantalyzer
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  ### Sleeper data ingestion service
+  ingest-sleeper:
+    build:
+      context: .
+      dockerfile: services/ingest-sleeper/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:

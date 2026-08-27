@@ -52,6 +52,17 @@ services:
         condition: service_healthy
       handcuff-service:
         condition: service_started
+  
+  ### Alert dispatcher
+  alert-dispatcher:
+    build:
+      context: .
+      dockerfile: services/alert-dispatcher/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:

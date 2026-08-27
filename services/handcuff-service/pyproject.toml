@@ -1,0 +1,13 @@
+[project]
+name = "handcuff-service"
+version = "0.1.0"
+description = "Owns the curated backfield/handcuff map, who benefits if a starter is out."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+]
+
+[tool.setuptools]
+py-modules = ["main"]

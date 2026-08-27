@@ -28,5 +28,15 @@ services:
       postgres:
         condition: service_healthy
 
+  ### Handcuff / backfield map service
+  handcuff-service:
+    build:
+      context: .
+      dockerfile: services/handcuff-service/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/handcuff-service/data:/app/data
+
 volumes:
   pgdata:

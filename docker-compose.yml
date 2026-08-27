@@ -38,5 +38,20 @@ services:
     volumes:
       - ./services/handcuff-service/data:/app/data
 
+  ### Scoring engine
+  scoring-engine:
+    build:
+      context: .
+      dockerfile: services/scoring-engine/Dockerfile
+    env_file:
+      - .env
+    environment:
+      HANDCUFF_SERVICE_URL: http://handcuff-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      handcuff-service:
+        condition: service_started
+
 volumes:
   pgdata:

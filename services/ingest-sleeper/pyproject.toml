@@ -1,0 +1,14 @@
+[project]
+name = "ingest-sleeper"
+version = "0.1.0"
+description = "Polls the Sleeper API and writes normalized events to Postgres."
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",
+    "psycopg2-binary>=2.9",
+    "schedule>=1.2",
+    "pydantic>=2.7",
+]
+
+[tool.setuptools]
+py-modules = ["client", "main"]

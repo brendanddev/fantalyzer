@@ -1,22 +1,2 @@
-
-# Environment variables
 .env
-
-# Python cache files
 __pycache__/
-
-# Data files
-players.json
-
-# Raw game data
-src/nfl_games/data 
-
-# Saved game models
-src/nfl_games/saved_models
-
-# Raw player data
-src/nfl_players/data
-
-# Saved player models
-src/nfl_players/saved_models
-

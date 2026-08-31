@@ -68,6 +68,12 @@ def init_schema():
                     updated_at TIMESTAMP NOT NULL DEFAULT now()
                 );
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS seen_news_items (
+                    item_link TEXT PRIMARY KEY,
+                    seen_at TIMESTAMP NOT NULL DEFAULT now()
+                );
+            """)
 
 
 def _insert_raw_event(conn, event: dict) -> int:
@@ -134,4 +140,24 @@ def upsert_injury_status(conn, player_id: str, injury_status, practice_participa
                 updated_at = now();
             """,
             (player_id, injury_status, practice_participation, news_updated),
+        )
+
+
+def has_seen_news_item(conn, link: str) -> bool:
+    """True if this news item's link has already been ingested."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM seen_news_items WHERE item_link = %s;", (link,))
+        return cur.fetchone() is not None
+
+
+def mark_news_item_seen(conn, link: str):
+    """Record a news item as ingested so later polls skip it."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO seen_news_items (item_link)
+            VALUES (%s)
+            ON CONFLICT (item_link) DO NOTHING;
+            """,
+            (link,),
         )

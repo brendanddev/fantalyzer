@@ -22,58 +22,93 @@ def get_conn():
         conn.close()
 
 
+# CREATE TABLE IF NOT EXISTS still races on Postgres's shared catalog when
+# several services boot at once against a fresh database. The loser of the race
+# surfaces the collision in one of several ways depending on how far it got:
+# DuplicateTable, DuplicateObject on the table's implicit row type, or a
+# UniqueViolation on a pg_ catalog index (pg_type_typname_nsp_index,
+# pg_class_relname_nsp_index). All of them mean "someone else created it
+# first", which is exactly the state we wanted.
+SCHEMA_STATEMENTS = [
+    """
+    CREATE TABLE IF NOT EXISTS raw_events (
+        id SERIAL PRIMARY KEY,
+        source TEXT NOT NULL,
+        league_id TEXT,
+        player_id TEXT,
+        player_name TEXT,
+        team TEXT,
+        payload JSONB NOT NULL DEFAULT '{}',
+        fetched_at TIMESTAMP NOT NULL DEFAULT now(),
+        processed BOOLEAN NOT NULL DEFAULT false
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS scored_events (
+        id SERIAL PRIMARY KEY,
+        raw_event_id INTEGER REFERENCES raw_events(id),
+        player_id TEXT,
+        player_name TEXT,
+        confidence REAL NOT NULL,
+        urgency TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        scored_at TIMESTAMP NOT NULL DEFAULT now(),
+        dispatched BOOLEAN NOT NULL DEFAULT false
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS sleeper_cache (
+        cache_key TEXT PRIMARY KEY,
+        payload JSONB NOT NULL,
+        fetched_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS player_injury_status (
+        player_id TEXT PRIMARY KEY,
+        injury_status TEXT,
+        practice_participation TEXT,
+        news_updated BIGINT,
+        updated_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS seen_news_items (
+        item_link TEXT PRIMARY KEY,
+        seen_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+    """,
+]
+
+
+def _lost_create_race(exc) -> bool:
+    """
+    True only for the catalog-level collisions two concurrent CREATE TABLEs
+    produce. A UniqueViolation from anywhere but a pg_ catalog index is a real
+    error and must not be swallowed.
+    """
+    if isinstance(exc, (psycopg2.errors.DuplicateTable, psycopg2.errors.DuplicateObject)):
+        return True
+    if isinstance(exc, psycopg2.errors.UniqueViolation):
+        return (exc.diag.constraint_name or "").startswith("pg_")
+    return False
+
+
 def init_schema():
-    """Run once at startup for each service (idempotent)."""
+    """Run once at startup for each service (idempotent, and safe to race)."""
     with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS raw_events (
-                    id SERIAL PRIMARY KEY,
-                    source TEXT NOT NULL,
-                    league_id TEXT,
-                    player_id TEXT,
-                    player_name TEXT,
-                    team TEXT,
-                    payload JSONB NOT NULL DEFAULT '{}',
-                    fetched_at TIMESTAMP NOT NULL DEFAULT now(),
-                    processed BOOLEAN NOT NULL DEFAULT false
-                );
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS scored_events (
-                    id SERIAL PRIMARY KEY,
-                    raw_event_id INTEGER REFERENCES raw_events(id),
-                    player_id TEXT,
-                    player_name TEXT,
-                    confidence REAL NOT NULL,
-                    urgency TEXT NOT NULL,
-                    reason TEXT NOT NULL,
-                    scored_at TIMESTAMP NOT NULL DEFAULT now(),
-                    dispatched BOOLEAN NOT NULL DEFAULT false
-                );
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS sleeper_cache (
-                    cache_key TEXT PRIMARY KEY,
-                    payload JSONB NOT NULL,
-                    fetched_at TIMESTAMP NOT NULL DEFAULT now()
-                );
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS player_injury_status (
-                    player_id TEXT PRIMARY KEY,
-                    injury_status TEXT,
-                    practice_participation TEXT,
-                    news_updated BIGINT,
-                    updated_at TIMESTAMP NOT NULL DEFAULT now()
-                );
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS seen_news_items (
-                    item_link TEXT PRIMARY KEY,
-                    seen_at TIMESTAMP NOT NULL DEFAULT now()
-                );
-            """)
+        for statement in SCHEMA_STATEMENTS:
+            # Committed one at a time: a rollback has to undo only the
+            # statement that lost, not the tables already created above it.
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(statement)
+                conn.commit()
+            except psycopg2.Error as e:
+                if not _lost_create_race(e):
+                    raise
+                conn.rollback()
+                print(f"[db] table already created by another service, continuing: {type(e).__name__}")
 
 
 def _insert_raw_event(conn, event: dict) -> int:

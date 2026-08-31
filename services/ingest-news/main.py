@@ -83,6 +83,10 @@ def load_known_players():
     could never match them anyway. Records with no full_name are skipped too:
     that is how Sleeper ships the 32 team-defense (DEF) pseudo-players, whose
     last_name is the team nickname ("Rams") rather than a person's surname.
+
+    Returns None when the cache row itself is missing, which is a different
+    situation from a cache that exists and yielded nobody ([]), and the caller
+    has to tell them apart before deciding what to mark as seen.
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -93,8 +97,7 @@ def load_known_players():
             row = cur.fetchone()
 
     if not row:
-        print("[ingest-news] no cached Sleeper player dump yet, run `ingest-sleeper` first")
-        return []
+        return None
 
     players = []
     for player_id, p in (row[0] or {}).items():
@@ -167,6 +170,15 @@ def poll_news():
         return
 
     known_players = load_known_players()
+    if known_players is None:
+        # ingest-sleeper has not written its first player dump yet. Bail out
+        # without touching seen_news_items: marking these now would strand them
+        # unmatchable forever, since the dedup table is what decides which
+        # items a later poll still bothers to look at. Nothing is inserted
+        # either, so the retry does not duplicate them in raw_events.
+        print(f"[ingest-news] fetched {len(entries)} items, skipped this pass "
+              "(no cached Sleeper player dump yet, run `ingest-sleeper` first)")
+        return
 
     new_count = 0
     matched_count = 0

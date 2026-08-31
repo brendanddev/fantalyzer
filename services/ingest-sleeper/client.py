@@ -105,6 +105,28 @@ class SleeperClient:
         return sorted(entries, key=lambda e: e["depth_chart_order"])
 
 
+    def get_injury_relevant_players(self):
+        """
+        Only the players carrying an injury_status, the other ~12k healthy
+        ones aren't worth iterating over every poll.
+        """
+        players = self.refresh_players() or {}
+        entries = []
+        for pid, p in players.items():
+            if not p.get("injury_status"):
+                continue
+            entries.append({
+                "player_id": pid,
+                "name": p.get("full_name"),
+                "team": p.get("team"),
+                "position": p.get("position"),
+                "injury_status": p.get("injury_status"),
+                "practice_participation": p.get("practice_participation"),
+                "news_updated": p.get("news_updated"),
+            })
+        return entries
+
+
     def get_trending_players(self, type="add", lookback_hours=24, limit=25):
         params = {"lookback_hours": lookback_hours, "limit": limit}
         return self._get_cached(f"players/nfl/trending/{type}", params=params, ttl=60)

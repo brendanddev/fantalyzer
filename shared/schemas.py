@@ -13,6 +13,7 @@ class SourceType(str, Enum):
     SLEEPER_TRENDING = "sleeper_trending"
     SLEEPER_ROSTER = "sleeper_roster"
     SLEEPER_PLAYERS = "sleeper_players"
+    SLEEPER_INJURY_STATUS = "sleeper_injury_status"
     NFLVERSE_DEPTH_CHART = "nflverse_depth_chart"
     NEWS_RSS = "news_rss"
 

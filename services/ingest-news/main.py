@@ -80,7 +80,9 @@ def load_known_players():
     """
     Player list built off the same cached Sleeper dump ingest-sleeper writes.
     Free agents/retired players (no team) are skipped, the team-signal rule
-    could never match them anyway.
+    could never match them anyway. Records with no full_name are skipped too:
+    that is how Sleeper ships the 32 team-defense (DEF) pseudo-players, whose
+    last_name is the team nickname ("Rams") rather than a person's surname.
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -98,11 +100,12 @@ def load_known_players():
     for player_id, p in (row[0] or {}).items():
         team = p.get("team")
         last_name = p.get("last_name")
-        if not team or not last_name:
+        full_name = p.get("full_name")
+        if not team or not last_name or not full_name:
             continue
         players.append({
             "player_id": player_id,
-            "full_name": p.get("full_name"),
+            "full_name": full_name,
             "last_name": last_name,
             "team": team,
             "position": p.get("position"),
@@ -137,11 +140,15 @@ def match_player(text, known_players, team_name_map):
     """
     text = (text or "").lower()
     for player in known_players:
-        full_name = player["full_name"]
+        last_name = player.get("last_name")
+        if not last_name or not player.get("full_name"):
+            continue
+
+        full_name = player.get("full_name")
         matched = bool(full_name) and _mentions(text, full_name)
         if not matched:
             matched = (
-                _mentions(text, player["last_name"])
+                _mentions(text, last_name)
                 and _team_mentioned(text, player["team"], team_name_map)
             )
         if not matched:

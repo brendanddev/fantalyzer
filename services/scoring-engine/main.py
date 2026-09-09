@@ -30,10 +30,19 @@ SOURCE_NEWS = "news_rss"
 TRENDING_BASE_CONFIDENCE = 0.7
 
 INJURY_STATUS_CONFIDENCE = {
-    "out": 0.75,
-    "doubtful": 0.75,
-    "ir": 0.75,
+    "out": 0.9,
+    "doubtful": 0.9,
+    "ir": 0.9,
+    "na": 0.9,
     "questionable": 0.5,
+}
+
+NEW_OCCURRENCE_ONLY_STATUSES = {"na"}
+
+SOURCE_PRIORITY = {
+    SOURCE_INJURY_STATUS: 0,
+    SOURCE_NEWS: 1,
+    SOURCE_TRENDING: 2,
 }
 
 NEWS_BASE_CONFIDENCE = 0.65
@@ -147,6 +156,18 @@ def score_injury_status_event(handcuff_entry: dict, payload: dict):
     participation, including recoveries ("Out" -> None) and statuses that say
     nothing about availability. Those are not actionable, so an unrecognized
     status returns None and the caller just marks the row processed.
+
+    "NA" is not a medical designation: it is how Sleeper represents a
+    suspension, an exempt-list placement, or another roster-limiting event.
+    A starter who unexpectedly cannot play is the same practical signal for
+    fantasy purposes whether the cause is medical or disciplinary, so entering
+    it is scored like Out/Doubtful/IR. Only ENTERING it counts --
+    NEW_OCCURRENCE_ONLY_STATUSES drops the case where the status sits at "NA"
+    while practice participation moves underneath it. Leaving "NA" needs no
+    guard: scoring keys off the NEW status, so "NA" -> healthy scores nothing
+    ("" is unmapped) and "NA" -> "Questionable" scores as Questionable. That a
+    returning starter deprives the backup of value is a different event that
+    deserves its own path, not this one.
     """
     status = (payload.get("injury_status") or "").strip()
     base_confidence = INJURY_STATUS_CONFIDENCE.get(status.lower())
@@ -157,8 +178,12 @@ def score_injury_status_event(handcuff_entry: dict, payload: dict):
     practice = (payload.get("practice_participation") or "").strip()
     previous_practice = (payload.get("previous_practice_participation") or "").strip()
 
+    status_changed = status.lower() != previous_status.lower()
+    if not status_changed and status.lower() in NEW_OCCURRENCE_ONLY_STATUSES:
+        return None
+
     changes = []
-    if status.lower() != previous_status.lower():
+    if status_changed:
         changes.append(f"injury status {previous_status or 'none'} -> {status}")
     if practice.lower() != previous_practice.lower():
         changes.append(f"practice {previous_practice or 'none'} -> {practice or 'none'}")
@@ -287,14 +312,33 @@ def build_candidate(source, event_id, player_id, payload):
     }
  
  
+def candidate_rank(candidate):
+    """
+    Ordering key for choosing between two fire candidates on the same backup,
+    lowest wins. Confidence is the first component and therefore always
+    decisive: SOURCE_PRIORITY is only ever consulted when two candidates carry
+    exactly the same confidence, and can never overturn a confidence gap.
+
+    On an exact tie the more informative source wins. injury_status and news
+    reason strings say WHY the backup matters -- the status change itself, or
+    the headline -- while trending only reports an adds count and explains
+    nothing. Confidence is rounded to two places in score_event, so "exactly
+    the same" is well defined here rather than a float coincidence.
+    """
+    return (
+        -candidate["scored"]["confidence"],
+        SOURCE_PRIORITY.get(candidate["source"], len(SOURCE_PRIORITY)),
+    )
+ 
+ 
 def drop_duplicate_fires(candidates):
     """
     Within one pass, several sources can independently fire for the same backup
     off the same real-world situation (a status change, and the story written
-    about that change). They are not independent evidence, so only the
-    highest-confidence one earns a row; the rest are dropped rather than written
-    as weaker duplicates. Ties go to the earliest event, since `candidates` is
-    already in fetched_at order.
+    about that change). They are not independent evidence, so only the best one
+    earns a row; the rest are dropped rather than written as weaker duplicates.
+    "Best" is candidate_rank: highest confidence, then source priority, then
+    the earliest event, since `candidates` is already in fetched_at order.
 
     log_only candidates are left alone -- they raise no alert, and keeping them
     preserves the audit trail of everything the pass actually saw.
@@ -305,7 +349,7 @@ def drop_duplicate_fires(candidates):
             continue
         backup_player_id = candidate["backup_player_id"]
         incumbent = best.get(backup_player_id)
-        if incumbent is None or candidate["scored"]["confidence"] > candidates[incumbent]["scored"]["confidence"]:
+        if incumbent is None or candidate_rank(candidate) < candidate_rank(candidates[incumbent]):
             best[backup_player_id] = index
 
     winners = set(best.values())

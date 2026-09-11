@@ -12,3 +12,7 @@ for (const entry of trending) {
 }
 
 console.log(`Inserted ${trending.length} trending events`);
+
+const players = await client.refreshPlayers();
+console.log(Object.keys(players).length, "players cached");
+console.log(players["5850"]);

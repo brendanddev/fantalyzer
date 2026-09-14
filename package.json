@@ -1,6 +1,6 @@
 {
   "name": "fantalyzer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A personal fantasy football edge system.",
   "main": "index.js",
   "scripts": {

@@ -1,5 +1,25 @@
 import { pool } from "../db/db.js";
 
+export interface League {
+    league_id: string;
+    name: string;
+    status: string;
+}
+
+export interface UserRecord {
+    user_id: string;
+    display_name: string;
+    username: string;
+}
+
+export interface Roster {
+    roster_id: string;
+    league_id: string;
+    owner_id: string;
+    players: string[];
+    injury_reserve: string[] | null;
+}
+
 export interface TrendingEntry {
     player_id: string;
     count: number;
@@ -11,6 +31,7 @@ interface PlayerRecord {
     team: string | null;
     position: string | null;
     depth_chart_order: number | null;
+    injury_status: string | null;
 }
 
 export class SleeperClient {
@@ -21,6 +42,7 @@ export class SleeperClient {
         this.baseUrl = baseUrl;
     }
 
+    // Raw, uncached GET request to a given Sleeper API endpoint; parses and returns JSON as type T
     private async get<T>(endpoint: string): Promise<T> {
         const response = await fetch(`${this.baseUrl}/${endpoint}`);
         if (!response.ok) {
@@ -28,6 +50,8 @@ export class SleeperClient {
         }
         return response.json() as Promise<T>;
     }
+
+    // GET with a Postgres-backed cache: if a cached copy exists and hasn't expired yet, return it; otherwise fetch fresh and update the cache
     private async getCached<T>(endpoint: string, ttlHours: number = 24): Promise<T> {
         const cacheKey = endpoint;
         const result = await pool.query(
@@ -55,6 +79,32 @@ export class SleeperClient {
         return fresh;
     }
 
+    async getPlayer(identifier: string): Promise<PlayerRecord | undefined> {
+        const players = await this.refreshPlayers();
+        return players[identifier];
+    }
+
+    async getLeague(identifier: string): Promise<League> {
+        const endpoint = `league/${identifier}`;
+        return this.get<League>(endpoint);
+    }
+
+    async getUser(identifier: string): Promise<UserRecord> {
+        const endpoint = `user/${identifier}`;
+        return this.get<UserRecord>(endpoint);
+    }
+
+    async getRosters(leagueId: string): Promise<Roster[]> {
+        const endpoint = `league/${leagueId}/rosters`;
+        return this.get<Roster[]>(endpoint);
+    }
+
+    async getWeeklyMatchups(leagueId: string, week: number) {
+        const endpoint = `league/${leagueId}/matchups/${week}`;
+        return this.get<any>(endpoint);
+    }
+
+    // Fetches players currently trending in adds/drops league wide (uncached)
     async getTrendingPlayers(
         type: "add" | "drop" = "add",
         lookbackHours: number = 24,
@@ -64,6 +114,57 @@ export class SleeperClient {
         return this.get<TrendingEntry[]>(endpoint);
     }
 
+    // Returns players with their `depth_chart_order`, optionally filtered by team/pos
+    async getDepthChartEntries(team?: string, position?: string): Promise<PlayerRecord[]> {
+        const players = await this.refreshPlayers();
+        const entries: PlayerRecord[] = [];
+
+        for (const [playerId, player] of Object.entries(players)) {
+            if (player.depth_chart_order === null) {
+                continue;
+            }
+            if (team && player.team !== team) {
+                continue;
+            }
+            if (position && player.position !== position) {
+                continue;
+            }
+            entries.push(player);
+        }
+        return entries.sort((a, b) => a.depth_chart_order! - b.depth_chart_order!);
+    }
+
+    // Returns only players carriying an `injury_status`
+    async getInjuryRelevantPlayers(): Promise<PlayerRecord[]> {
+        const players = await this.refreshPlayers();
+        const entries: PlayerRecord[] = [];
+
+        for (const [playerId, player] of Object.entries(players)) {
+            if (!player.injury_status) {
+                continue;
+            }
+            entries.push(player);
+        }
+        return entries;
+    }
+    
+    // Returns all free-agent player_ids in the league (all players minus everyone currently rostered)
+    async getFreeAgentPool(leagueId: string): Promise<string[]> {
+        const rosters: Roster[] = await this.getRosters(leagueId);
+        const rostered = new Set<string>();
+
+        for (const roster of rosters) {
+            const rosterPlayers = roster.players;
+            for (const playerId of rosterPlayers) {
+                rostered.add(playerId);
+            }
+        }
+        const allPlayerIds = Object.keys(await this.refreshPlayers());
+        const freeAgents = allPlayerIds.filter(playerId => !rostered.has(playerId));
+        return freeAgents;
+    }
+
+    // Fetches the full NFL player dump, cached 24h per Sleepers own guidance
     async refreshPlayers(): Promise<Record<string, PlayerRecord>> {
         const endpoint = "players/nfl";
         return this.getCached<Record<string, PlayerRecord>>(
@@ -72,13 +173,4 @@ export class SleeperClient {
         );
     }
 
-
 }
-
-
-//  def refresh_players(self):
-//         """
-//         Full player dump, Sleeper says to cache this and pull once a day,
-//         not on every request.
-//         """
-//         return self._get_cached("players/nfl", ttl=PLAYERS_TTL_SECONDS)

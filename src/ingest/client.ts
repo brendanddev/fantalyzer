@@ -32,6 +32,7 @@ interface PlayerRecord {
     position: string | null;
     depth_chart_order: number | null;
     injury_status: string | null;
+    practice_participation: string | null;
 }
 
 export class SleeperClient {
@@ -147,7 +148,7 @@ export class SleeperClient {
         }
         return entries;
     }
-    
+
     // Returns all free-agent player_ids in the league (all players minus everyone currently rostered)
     async getFreeAgentPool(leagueId: string): Promise<string[]> {
         const rosters: Roster[] = await this.getRosters(leagueId);

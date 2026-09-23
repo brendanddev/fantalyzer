@@ -7,6 +7,7 @@ const TRENDING_POLL_INTERVAL_MS = 60_000;
 const ROSTER_POLL_INTERVAL_MS = 5 * 60_000;
 const PLAYERS_POLL_INTERVAL_MS = 24 * 60 * 60_000;
 const INJURY_POLL_INTERVAL_MS = 15 * 60_000;
+const NEWS_POLL_INTERVAL_MS = 30 * 60_000;
 
 async function pollTrending(): Promise<void> {
     try {
@@ -76,12 +77,46 @@ async function pollInjuryStates(): Promise<void> {
     }
 }
 
+async function pollNews(): Promise<void> {
+    try {
+        const injuredStarters = await client.getInjuredStarters(10);
+        let changed = 0;
+
+        for (const injuredStarter of injuredStarters) {
+            const injuredStarterNews = await client.getPlayerNews(injuredStarter?.player_id, 3);
+            for (const newsItem of injuredStarterNews) {
+
+            }
+        }
+
+    } catch (err) {
+
+    } finally {
+        setTimeout(pollNews, NEWS_POLL_INTERVAL_MS);
+
+    }
+}
+
+
+// for (const injuredStarter of injuredStarters) {
+//     const injuredStarterNews = await client.getPlayerNews(injuredStarter.player_id, 3);
+
+//     for (const newsItem of injuredStarterNews) {
+//         // check: has newsItem.metadata.topic_id been seen before?
+//         // if not: log/store it, mark it seen
+//     }
+// }
+
+
 // async function pollTrendingNews(): Promise<void> {
 //     const news = await client.getPlayerNews("5850", 3);
 //     console.log(news);
 // }
 
-pollTrending();
-pollRosters();
-pollPlayers();
-pollInjuryStates();
+// pollTrending();
+// pollRosters();
+// pollPlayers();
+// pollInjuryStates();
+
+const starters = await client.getInjuredStarters(10);
+console.log(starters.map(p => `${p.full_name} (${p.team} ${p.position})`));

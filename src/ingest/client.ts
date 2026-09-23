@@ -1,5 +1,7 @@
 import { pool } from "../db/db.js";
 
+const RELEVANT_FANTASY_POSITIONS: string[] = ['WR', 'RB', 'TE', 'QB'];
+
 export interface League {
     league_id: string;
     name: string;
@@ -185,6 +187,16 @@ export class SleeperClient {
             entries.push(player);
         }
         return entries;
+    }
+
+    async getInjuredStarters(limit: number): Promise<PlayerRecord[]> {
+        const injuredPlayers: PlayerRecord[] = await this.getInjuryRelevantPlayers();
+        const relevantInjuryPlayers: PlayerRecord[] = injuredPlayers.filter(player =>
+            (player.team && player.position && player.depth_chart_order === 1
+            && RELEVANT_FANTASY_POSITIONS.includes(player.position) ))
+            .slice(0, limit);
+
+        return relevantInjuryPlayers;
     }
 
     // Returns all free-agent player_ids in the league (all players minus everyone currently rostered)

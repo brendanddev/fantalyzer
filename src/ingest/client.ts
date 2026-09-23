@@ -35,8 +35,28 @@ interface PlayerRecord {
     practice_participation: string | null;
 }
 
+interface PlayerNewsMetadata {
+    title: string;
+    description: string;
+    topic_id: string;
+    analysis: string | null;
+    url: string | null;
+}
+
+interface PlayerNews {
+    player_id: string;
+    source: string;
+    published: number;
+    metadata: PlayerNewsMetadata;
+}
+
+interface GetPlayerNewsResponse {
+    get_player_news: PlayerNews[];
+}
+
 export class SleeperClient {
     private static readonly PLAYERS_TTL_HOURS = 24;
+    private readonly graphqlUrl: string = "https://sleeper.com/graphql";
     private baseUrl: string;
 
     constructor(baseUrl: string = "https://api.sleeper.app/v1") {
@@ -78,6 +98,24 @@ export class SleeperClient {
             [cacheKey, JSON.stringify(fresh)]
         );
         return fresh;
+    }
+
+    // POST based GraphQL request, query and variables kept separate to avoid unsafely interpolating values into the query string
+    private async post<T>(query: string, variables: Record<string, any>): Promise<T> {
+        const response = await fetch(this.graphqlUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, variables }),
+        });
+        if (!response.ok) {
+            throw new Error(`GraphQL request failed: ${response.status}`);
+        }
+
+        const parsed = await response.json();
+        if (parsed.errors) {
+            throw new Error(`GraphQL error: ${JSON.stringify(parsed.errors)}`);
+        }
+        return parsed.data as T;
     }
 
     async getPlayer(identifier: string): Promise<PlayerRecord | undefined> {
@@ -163,6 +201,15 @@ export class SleeperClient {
         const allPlayerIds = Object.keys(await this.refreshPlayers());
         const freeAgents = allPlayerIds.filter(playerId => !rostered.has(playerId));
         return freeAgents;
+    }
+
+    // Fetches recent news stories for a single player via Sleeper's undocumented GraphQL API (no official stability guarantee)
+    async getPlayerNews(playerId: string, limit: number): Promise<PlayerNews[]> {
+        const query = "query GetPlayerNews($playerId: String!, $limit: Int) { get_player_news(sport: \"nfl\", player_id: $playerId, limit: $limit) { player_id source published metadata } }";
+        const variables = { playerId: playerId, limit: limit };
+
+        const result = await this.post<GetPlayerNewsResponse>(query, variables);
+        return result.get_player_news;
     }
 
     // Fetches the full NFL player dump, cached 24h per Sleepers own guidance

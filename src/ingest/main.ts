@@ -76,6 +76,11 @@ async function pollInjuryStates(): Promise<void> {
     }
 }
 
+// async function pollTrendingNews(): Promise<void> {
+//     const news = await client.getPlayerNews("5850", 3);
+//     console.log(news);
+// }
+
 pollTrending();
 pollRosters();
 pollPlayers();

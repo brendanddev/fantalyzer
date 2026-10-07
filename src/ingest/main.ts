@@ -77,35 +77,28 @@ async function pollInjuryStates(): Promise<void> {
     }
 }
 
-async function pollNews(): Promise<void> {
-    try {
-        const injuredStarters = await client.getInjuredStarters(10);
-        let changed = 0;
+// async function pollNews(): Promise<void> {
+//     try {
+//         const injuredStarters = await client.getInjuredStarters(10);
+//         let changed = 0;
 
-        for (const injuredStarter of injuredStarters) {
-            const injuredStarterNews = await client.getPlayerNews(injuredStarter?.player_id, 3);
-            for (const newsItem of injuredStarterNews) {
-
-            }
-        }
-
-    } catch (err) {
-
-    } finally {
-        setTimeout(pollNews, NEWS_POLL_INTERVAL_MS);
-
-    }
-}
-
-
-// for (const injuredStarter of injuredStarters) {
-//     const injuredStarterNews = await client.getPlayerNews(injuredStarter.player_id, 3);
-
-//     for (const newsItem of injuredStarterNews) {
-//         // check: has newsItem.metadata.topic_id been seen before?
+//         for (const injuredStarter of injuredStarters) {
+//             const injuredStarterNews = await client.getPlayerNews(injuredStarter?.player_id, 3);
+//             for (const newsItem of injuredStarterNews) {
+//                  check: has newsItem.metadata.topic_id been seen before?
 //         // if not: log/store it, mark it seen
+
+//             }
+//         }
+
+//     } catch (err) {
+
+//     } finally {
+//         setTimeout(pollNews, NEWS_POLL_INTERVAL_MS);
+
 //     }
 // }
+
 
 
 // async function pollTrendingNews(): Promise<void> {
@@ -118,5 +111,16 @@ async function pollNews(): Promise<void> {
 // pollPlayers();
 // pollInjuryStates();
 
-const starters = await client.getInjuredStarters(10);
-console.log(starters.map(p => `${p.full_name} (${p.team} ${p.position})`));
+const trendingPlayers = await client.getTrendingPlayers("add", 24, 15);
+for (const entry of trendingPlayers) {
+
+    const playerId: string = entry.player_id;
+    const player = await client.getPlayer(playerId);
+
+    console.log(`Player: ${player?.full_name}, ID: ${playerId}, Position: ${player?.position}`);
+
+}
+// console.log(defences);
+// for (const option in defences) {
+//     console.log(option);
+// }

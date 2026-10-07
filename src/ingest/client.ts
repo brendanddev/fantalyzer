@@ -1,5 +1,13 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 
+export interface NflState {
+    week: number;
+    display_week: number;
+    leg: number;
+    season: string;
+    season_type: string;
+}
+
 export interface League {
     league_id: string;
     name: string;
@@ -45,6 +53,26 @@ export interface TrendingEntry {
     count: number;
 }
 
+export type DepthChart = Record<string, string[]>;
+
+export type Stats = Record<string, number>;
+
+export interface PlayerWeekEntry {
+    player_id: string;
+    week: number | null;
+    season: string;
+    team: string;
+    opponent: string | null;
+    game_id: string;
+    date: string;
+    category: "stat" | "proj";
+    stats: Stats;
+}
+
+// Shape returned by the stats and projections endpoints when `grouping=week`.
+// Keys are week numbers as strings ("1".."18"), value is null when no data for that week.
+export type WeeklyEntries = Record<string, PlayerWeekEntry | null>;
+
 const PLAYERS_FILE = "data/players.json";
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -60,7 +88,7 @@ export class SleeperClient {
     }
 
     public async get<T>(endpoint: string, base: string = this.baseUrl): Promise<T> {
-        const response = await fetch(`${this.baseUrl}/${endpoint}`);
+        const response = await fetch(`${base}/${endpoint}`);
         if (!response.ok) {
             throw new Error(`Request failed: ${response.status}`);
         }
@@ -87,6 +115,10 @@ export class SleeperClient {
         }
     }
 
+    async getNflState(): Promise<NflState> {
+        return this.get<NflState>(`state/nfl`);
+    }
+
     async getLeague(leagueId: string): Promise<League> {
         return this.get<League>(`league/${leagueId}`);
     }
@@ -95,7 +127,7 @@ export class SleeperClient {
         return this.get<Roster[]>(`league/${leagueId}/rosters`);
     }
 
-    async getUser(userId: string): Promise<User | undefined> {
+    async getUser(userId: string): Promise<User> {
         return this.get<User>(`user/${userId}`);
     }
 
@@ -131,6 +163,24 @@ export class SleeperClient {
 
     async getTrendingPlayers(type: "add" | "drop", lookbackHours = 24, limit = 20): Promise<TrendingEntry[]> {
         return this.get(`players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`);
+    }
+
+    // Uses Sleeper private API, undocumenterd, may break without notice.
+    
+    async getDepthChart(team: string): Promise<DepthChart> {
+        return this.get<DepthChart>(`players/nfl/${team}/depth_chart`, SLEEPER_PRIVATE_API);
+    }
+    
+    async getPlayerStats(playerId: string): Promise<PlayerWeekEntry> {
+        return this.get<PlayerWeekEntry>(`stats/nfl/player/${playerId}?season_type=regular&season=2026`, SLEEPER_PRIVATE_API);
+    }
+
+    async getPlayerStatsByWeek(playerId: string): Promise<WeeklyEntries> {
+        return this.get<WeeklyEntries>(`stats/nfl/player/${playerId}?season_type=regular&season=2026&grouping=week`, SLEEPER_PRIVATE_API);
+    }
+
+    async getPlayerProjectionsByWeek(playerId: string): Promise<WeeklyEntries> {
+        return this.get<WeeklyEntries>(`projections/nfl/player/${playerId}?season_type=regular&season=2026&grouping=week`, SLEEPER_PRIVATE_API);
     }
 
     // Todo!

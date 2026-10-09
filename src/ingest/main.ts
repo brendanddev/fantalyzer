@@ -1,4 +1,4 @@
-import { SLEEPER_LEAGUES } from "../config.js";
+import { SLEEPER_LEAGUES } from "../config/config.js";
 import { SleeperClient } from "./client.js";
 
 const client = new SleeperClient();

@@ -191,6 +191,16 @@ export class SleeperClient {
         return this.get<WeeklyEntries>(`projections/nfl/player/${playerId}?season_type=regular&season=2026&grouping=week`, SLEEPER_PRIVATE_API);
     }
 
+    async getWeeklyLeaders(season: number, week: number, positions: string[]) {
+        // ?position[]=QB&position[]=RB&position[]=TE&position[]=WR&position[]=K&position[]=DEF
+        let query: string = `?season_type=regular&`;
+        positions.forEach(position => {
+            query += `position[]=${position}&`;
+        });
+        query += `&order_by=pts_ppr`;
+        return this.get(`stats/nfl/${season}/${week}${query}`, SLEEPER_PRIVATE_API);
+    }
+
     // Todo!
     // async getWeeklyMatchups(leagueId: string, week: number) {
     //     return this.get(`league/${leagueId}/matchups/${week}`);

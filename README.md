@@ -10,6 +10,6 @@ A personal fantasy football edge system.
 fantalyzer/
 ├── data/
 ├── src/                   
-│   ├── ingest/
+│   ├── ingest/         # Ingests NFL fantasy data from Sleeper
 │   ├── config.ts
 ```

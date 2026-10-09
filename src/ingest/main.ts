@@ -6,23 +6,13 @@ const bagotLeague = SLEEPER_LEAGUES["bagot"];
 const playerMap = await client.getPlayers();
 
 if (bagotLeague) {
-    const playerStats: PlayerWeekEntry = await client.getPlayerStats("9493");
-    // console.log({
-    //     player_id: playerStats.player_id,
-    //     week: playerStats.week,
-    //     season: playerStats.season,
-    //     team: playerStats.team,
-    //     opponent: playerStats.opponent,
-    //     game_id: playerStats.game_id,
-    //     date: playerStats.date,
-    //     category: playerStats.category,
-    //     stats: playerStats.stats,
-    // });
+    const defences = await client.getTrendingPlayersByPosition("DEF", 20);
+    console.log(defences);
 
-    // console.log("===== Player Stats ====");
-    // const playerStats = await client.getPlayerStats("9493");
-    // console.log(playerStats);
-
+    // const trendingDefense = trendingPlayers.map(entry => 
+    // console.log(trendingPlayers);
 } else {
     console.log(`Invalid User ID`);
 }
+
+

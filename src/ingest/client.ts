@@ -73,8 +73,10 @@ export interface PlayerWeekEntry {
 // Keys are week numbers as strings ("1".."18"), value is null when no data for that week.
 export type WeeklyEntries = Record<string, PlayerWeekEntry | null>;
 
+export type FantasyPosition = "QB" | "RB" | "WR" | "TE" | "K" | "DEF";
+
 const PLAYERS_FILE = "data/players.json";
-const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const PLAYERS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const SLEEPER_API = "https://api.sleeper.app/v1";
 const SLEEPER_PRIVATE_API = "https://api.sleeper.com";
@@ -104,12 +106,12 @@ export class SleeperClient {
         return players;
     }
 
-    // Returns true if the players file is older than the cache window,
+    // Returns true if the given file is older than the specified cache window,
     // or dosent exist yet (stat throws, treated as stale).
-    private async isCacheStale(): Promise<boolean> {
+    private async isCacheStale(file: string, maxAgeMs: number): Promise<boolean> {
         try {
-            const stats = await stat(PLAYERS_FILE);
-            return Date.now() - stats.mtimeMs > CACHE_MAX_AGE_MS;
+            const stats = await stat(file);
+            return Date.now() - stats.mtimeMs > maxAgeMs;
         } catch {
             return true;
         }
@@ -138,7 +140,7 @@ export class SleeperClient {
     async getPlayers(forceRefresh = false): Promise<Record<string, Player>> {
         if (forceRefresh) return this.refreshPlayerCache();
         if (this.playerCache) return this.playerCache;
-        if (await this.isCacheStale()) return this.refreshPlayerCache();
+        if (await this.isCacheStale(PLAYERS_FILE, PLAYERS_CACHE_MAX_AGE_MS)) return this.refreshPlayerCache();
 
         const raw = await readFile(PLAYERS_FILE, "utf-8");
         const players = JSON.parse(raw) as Record<string, Player>;
@@ -165,12 +167,18 @@ export class SleeperClient {
         return this.get(`players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`);
     }
 
+    async getTrendingPlayersByPosition(position: FantasyPosition, limit: number): Promise<TrendingEntry[]> {
+        const playerMap = await this.getPlayers();
+        const trendingPlayers = await this.getTrendingPlayers("add", 24, limit);
+        return trendingPlayers.filter(entry => playerMap[entry.player_id]?.fantasy_positions?.includes(position));
+    }
+
     // Uses Sleeper private API, undocumenterd, may break without notice.
-    
+
     async getDepthChart(team: string): Promise<DepthChart> {
         return this.get<DepthChart>(`players/nfl/${team}/depth_chart`, SLEEPER_PRIVATE_API);
     }
-    
+
     async getPlayerStats(playerId: string): Promise<PlayerWeekEntry> {
         return this.get<PlayerWeekEntry>(`stats/nfl/player/${playerId}?season_type=regular&season=2026`, SLEEPER_PRIVATE_API);
     }

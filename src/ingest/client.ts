@@ -1,79 +1,5 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
-
-export interface NflState {
-    week: number;
-    display_week: number;
-    leg: number;
-    season: string;
-    season_type: string;
-}
-
-export interface League {
-    league_id: string;
-    name: string;
-    status: string;
-    season: string;
-    sport: string;
-    total_rosters: number;
-}
-
-export interface Roster {
-    league_id: string;
-    owner_id: string;
-    roster_id: number;
-    players: string[];
-    starters: string[];
-}
-
-export interface User {
-    user_id: string;
-    username: string;
-    display_name: string;
-}
-
-export interface Player {
-    player_id: string;
-    full_name: string;
-    team: string;
-    position: string | null;
-    fantasy_positions: string[] | null;
-    depth_chart_order: number;
-    injury_status: string | null;
-    status: string | null;
-}
-
-export interface RosterWithPlayers {
-    roster_id: number;
-    owner_id: string;
-    players: (Player | undefined)[];
-}
-
-export interface TrendingEntry {
-    player_id: string;
-    count: number;
-}
-
-export type DepthChart = Record<string, string[]>;
-
-export type Stats = Record<string, number>;
-
-export interface PlayerWeekEntry {
-    player_id: string;
-    week: number | null;
-    season: string;
-    team: string;
-    opponent: string | null;
-    game_id: string;
-    date: string;
-    category: "stat" | "proj";
-    stats: Stats;
-}
-
-// Shape returned by the stats and projections endpoints when `grouping=week`.
-// Keys are week numbers as strings ("1".."18"), value is null when no data for that week.
-export type WeeklyEntries = Record<string, PlayerWeekEntry | null>;
-
-export type FantasyPosition = "QB" | "RB" | "WR" | "TE" | "K" | "DEF";
+import type { DepthChart, FantasyPosition, League, NflState, Player, PlayerWeekEntry, Roster, RosterWithPlayers, TrendingEntry, User, WeeklyEntries } from "./types.js";
 
 const PLAYERS_FILE = "data/players.json";
 const PLAYERS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -173,7 +99,7 @@ export class SleeperClient {
         return trendingPlayers.filter(entry => playerMap[entry.player_id]?.fantasy_positions?.includes(position));
     }
 
-    // Uses Sleeper private API, undocumenterd, may break without notice.
+    // Uses Sleeper private API, undocumented, may break without notice.
 
     async getDepthChart(team: string): Promise<DepthChart> {
         return this.get<DepthChart>(`players/nfl/${team}/depth_chart`, SLEEPER_PRIVATE_API);
@@ -191,13 +117,9 @@ export class SleeperClient {
         return this.get<WeeklyEntries>(`projections/nfl/player/${playerId}?season_type=regular&season=2026&grouping=week`, SLEEPER_PRIVATE_API);
     }
 
-    async getWeeklyLeaders(season: number, week: number, positions: string[]) {
-        // ?position[]=QB&position[]=RB&position[]=TE&position[]=WR&position[]=K&position[]=DEF
-        let query: string = `?season_type=regular&`;
-        positions.forEach(position => {
-            query += `position[]=${position}&`;
-        });
-        query += `&order_by=pts_ppr`;
+    async getWeeklyLeaders(season: number, week: number, positions: FantasyPosition[]) {
+        const posParams = positions.map(pos => `position[]=${pos}`).join('&');
+        const query = `?season_type=regular&${posParams}&order_by=pts_ppr`;
         return this.get(`stats/nfl/${season}/${week}${query}`, SLEEPER_PRIVATE_API);
     }
 

@@ -113,3 +113,14 @@ export interface StandingsEntry {
 
 // A collection of entries making up the league standings.
 export type LeagueStandings = StandingsEntry[];
+
+// Describes one teams side of a weekly matchup. Two entries share a matchup_id.
+// null means that roster isnt playing. 
+export interface MatchupEntry {
+    matchup_id: number | null;
+    roster_id: number;
+    points: number;
+    players: string[];
+    starters: string[];
+    players_points: Record<string, number>;
+}

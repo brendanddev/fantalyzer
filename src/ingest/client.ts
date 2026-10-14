@@ -1,6 +1,6 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
-import type { DepthChart, FantasyPosition, League, LeagueStandings, NflState, Player, PlayerWeekEntry, Roster, RosterWithPlayers, StandingsEntry, TrendingEntry, User, WeeklyEntries } from "./types.js";
-import { combinePoints } from "./util.js";
+import type { DepthChart, FantasyPosition, League, LeagueStandings, MatchupEntry, NflState, Player, PlayerWeekEntry, Roster, RosterWithPlayers, StandingsEntry, TrendingEntry, User, WeeklyEntries } from "./types.js";
+import { combinePoints, compareByStandings } from "./util.js";
 
 const PLAYERS_FILE = "data/players.json";
 const PLAYERS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -106,12 +106,7 @@ export class SleeperClient {
         users.forEach(user => userNames[user.user_id] = user.display_name);
     
         const rosters = await this.getRosters(leagueId);
-        const orderedRosters = rosters.sort(
-            (a, b) => 
-                (b.settings.wins - a.settings.wins) || 
-                (combinePoints(b.settings.fpts, b.settings.fpts_decimal) -
-                combinePoints(a.settings.fpts, a.settings.fpts_decimal))
-        );
+        const orderedRosters = rosters.sort(compareByStandings);
 
         return orderedRosters.map((roster, idx) => ({
             rank: idx + 1,
@@ -124,9 +119,8 @@ export class SleeperClient {
         }));
     }
 
-    // Todo!
-    async getWeeklyMatchups(leagueId: string, week: number) {
-        return this.get(`league/${leagueId}/matchups/${week}`);
+    async getWeeklyMatchups(leagueId: string, week: number): Promise<MatchupEntry[]> {
+        return this.get<MatchupEntry[]>(`league/${leagueId}/matchups/${week}`);
     }
 
     // Uses Sleeper private API, undocumented, may break without notice.

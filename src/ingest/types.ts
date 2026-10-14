@@ -24,6 +24,7 @@ export interface Roster {
     roster_id: number;
     players: string[];
     starters: string[];
+    settings: RosterSettings;
 }
 
 // A league member.
@@ -85,3 +86,30 @@ export type WeeklyEntries = Record<string, PlayerWeekEntry | null>;
 
 // Roster slots Sleeper reports in fantasy_positions.
 export type FantasyPosition = "QB" | "RB" | "WR" | "TE" | "K" | "DEF";
+
+// Describes the settings type nested in each roster.
+export interface RosterSettings {
+    fpts: number;
+    fpts_against: number;
+    fpts_against_decimal: number;
+    fpts_decimal: number;
+    losses: number;
+    ppts: number;
+    ppts_decimal: number;
+    ties: number;
+    wins: number;
+}
+
+// Derived, not an API response: a singular entry in the leagues standings.
+export interface StandingsEntry {
+    rank: number;
+    team_name: string;
+    wins: number;
+    losses: number;
+    ties: number;
+    points: number;
+    points_against: number;
+}
+
+// A collection of entries making up the league standings.
+export type LeagueStandings = StandingsEntry[];

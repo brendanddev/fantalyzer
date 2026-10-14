@@ -2,14 +2,12 @@ import { SLEEPER_LEAGUES } from "../config/config.js";
 import { SleeperClient } from "./client.js";
 
 const client = new SleeperClient();
-const bagotLeague = SLEEPER_LEAGUES["bagot"];
+const emotiLeague = SLEEPER_LEAGUES["emoticon"];
 const playerMap = await client.getPlayers();
 
-if (bagotLeague) {
-    const weeklyLeaders = await client.getWeeklyLeaders(2026, 5, ['WR', 'K']);
-    console.log(weeklyLeaders);
+if (emotiLeague) {
+    const standings = await client.getLeagueStandings(emotiLeague);
+    console.log(standings);
 } else {
     console.log(`Invalid User ID`);
 }
-
-

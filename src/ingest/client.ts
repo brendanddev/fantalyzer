@@ -1,5 +1,6 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
-import type { DepthChart, FantasyPosition, League, NflState, Player, PlayerWeekEntry, Roster, RosterWithPlayers, TrendingEntry, User, WeeklyEntries } from "./types.js";
+import type { DepthChart, FantasyPosition, League, LeagueStandings, NflState, Player, PlayerWeekEntry, Roster, RosterWithPlayers, StandingsEntry, TrendingEntry, User, WeeklyEntries } from "./types.js";
+import { combinePoints } from "./util.js";
 
 const PLAYERS_FILE = "data/players.json";
 const PLAYERS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -99,6 +100,35 @@ export class SleeperClient {
         return trendingPlayers.filter(entry => playerMap[entry.player_id]?.fantasy_positions?.includes(position));
     }
 
+    async getLeagueStandings(leagueId: string): Promise<StandingsEntry[]> {
+        const users = await this.getAllUsers(leagueId);
+        const userNames: Record<string, string> = {};
+        users.forEach(user => userNames[user.user_id] = user.display_name);
+    
+        const rosters = await this.getRosters(leagueId);
+        const orderedRosters = rosters.sort(
+            (a, b) => 
+                (b.settings.wins - a.settings.wins) || 
+                (combinePoints(b.settings.fpts, b.settings.fpts_decimal) -
+                combinePoints(a.settings.fpts, a.settings.fpts_decimal))
+        );
+
+        return orderedRosters.map((roster, idx) => ({
+            rank: idx + 1,
+            team_name: userNames[roster.owner_id] ?? "(unknown)",
+            wins: roster.settings.wins,
+            losses: roster.settings.losses,
+            ties: roster.settings.ties,
+            points: combinePoints(roster.settings.fpts, roster.settings.fpts_decimal),
+            points_against: combinePoints(roster.settings.fpts_against, roster.settings.fpts_against_decimal)
+        }));
+    }
+
+    // Todo!
+    async getWeeklyMatchups(leagueId: string, week: number) {
+        return this.get(`league/${leagueId}/matchups/${week}`);
+    }
+
     // Uses Sleeper private API, undocumented, may break without notice.
 
     async getDepthChart(team: string): Promise<DepthChart> {
@@ -122,10 +152,5 @@ export class SleeperClient {
         const query = `?season_type=regular&${posParams}&order_by=pts_ppr`;
         return this.get(`stats/nfl/${season}/${week}${query}`, SLEEPER_PRIVATE_API);
     }
-
-    // Todo!
-    // async getWeeklyMatchups(leagueId: string, week: number) {
-    //     return this.get(`league/${leagueId}/matchups/${week}`);
-    // }
 
 }

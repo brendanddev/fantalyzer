@@ -147,8 +147,8 @@ export class SleeperClient {
         return injuryRelevantStarters;
     }
 
-    // Returns all free agent `player_id` in the league.
-    async getFreeAgents(leagueId: string): Promise<string[]> {
+    // Returns all free agents in the league.
+    async getFreeAgents(leagueId: string): Promise<Player[]> {
         const rosters: Roster[] = await this.getRosters(leagueId);
         const rosteredPlayers = new Set<string>();
 
@@ -158,13 +158,29 @@ export class SleeperClient {
                 rosteredPlayers.add(playerId);
             }
         }
-        const allPlayerIds = Object.keys(await this.getPlayers());
-        const freeAgents = allPlayerIds.filter(playerId => !rosteredPlayers.has(playerId));
-        return freeAgents;
+        const playerMap = await this.getPlayers();
+        return Object.values(playerMap).filter(player => !rosteredPlayers.has(player.player_id));
     }
 
+    async getSnapPercentageForWeek(playerId: string, week: number): Promise<number | undefined> {
+        const playerStats = await this.getPlayerStatsByWeek(playerId);
+        const weekEntry = playerStats[String(week)];
 
-    // async getSnapPercentage()
+        if (!weekEntry) {
+            return undefined;
+        }
+
+        const weekStats = weekEntry.stats;
+        const offensiveSnaps = weekStats.off_snp;
+        const totalOffensiveSnaps = weekStats.tm_off_snp;
+
+        if (offensiveSnaps !== undefined && totalOffensiveSnaps) {
+            return offensiveSnaps / totalOffensiveSnaps;
+        } else {
+            return undefined;
+        }
+    }
+
     // async getPlayerNews()
 
 

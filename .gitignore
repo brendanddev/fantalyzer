@@ -1,5 +1,29 @@
-.env
+# Env
+.env*
+!.env.example
+
+# Deps
 node_modules/
+
+# Build output
 dist/
-data/
 old/
+.next/
+out/
+build/
+
+# Data cache
+data/
+
+# TS
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+.DS_Store
+*.pem
+.vercel
+
+# Debug
+npm-debug.log*
+yarn-*.log*

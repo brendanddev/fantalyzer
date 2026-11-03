@@ -5,6 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && tsc",
+    "watch": "tsc --watch --preserveWatchOutput",
     "ingest": "tsx src/ingest/main.ts",
     "migrate:create": "node-pg-migrate create -j ts --migrations-dir src/db/migrations",
     "migrate:up": "node-pg-migrate up --migrations-dir src/db/migrations",

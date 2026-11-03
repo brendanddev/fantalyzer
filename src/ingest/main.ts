@@ -5,18 +5,18 @@ const client = new SleeperClient();
 const emotiLeague = SLEEPER_LEAGUES["emoticon"];
 const playerMap = await client.getPlayers();
 
+const PUKA_PLAYER_ID = '9493';
+
 if (emotiLeague) {
-    // const standings = await client.getLeagueStandings(emotiLeague);
-    // console.log(standings);
 
-    // matchup_id 
-    // roster_id x2
+    const injuredStarters = await client.getInjuredStarters(10);
+    console.log(injuredStarters);
 
-    const matchups = await client.getWeeklyMatchups(emotiLeague, 6);
-    for (const matchup of matchups) {
-        console.log(matchup);
-    }
-    // console.log(matchups);
+    const freeAgents = await client.getFreeAgents(emotiLeague);
+    console.log(freeAgents);
+
+    const puka = await client.getPlayerById(PUKA_PLAYER_ID);
+    console.log(puka);
 
 } else {
     console.log(`Invalid User ID`);

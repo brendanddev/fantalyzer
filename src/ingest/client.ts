@@ -1,5 +1,5 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
-import type { DepthChart, FantasyPosition, League, LeagueStandings, MatchupEntry, NflState, Player, PlayerWeekEntry, Roster, RosterWithPlayers, StandingsEntry, TrendingEntry, User, WeeklyEntries } from "./types.js";
+import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type User, type WeeklyEntries } from "./types.js";
 import { combinePoints, compareByStandings } from "./util.js";
 
 const PLAYERS_FILE = "data/players.json";
@@ -122,6 +122,51 @@ export class SleeperClient {
     async getWeeklyMatchups(leagueId: string, week: number): Promise<MatchupEntry[]> {
         return this.get<MatchupEntry[]>(`league/${leagueId}/matchups/${week}`);
     }
+
+    // Returns all players carriying an `injury_status`.
+    async getInjuryRelevantPlayers(): Promise<Player[]> {
+        const players = await this.getPlayers();
+        const entries: Player[] = [];
+
+        for (const [playerId, player] of Object.entries(players)) {
+            if (!player.injury_status) {
+                continue;
+            }
+            entries.push(player);
+        }
+        return entries;
+    }
+
+    async getInjuredStarters(limit: number): Promise<Player[]> {
+        const injuredPlayers: Player[] = await this.getInjuryRelevantPlayers();
+        const injuryRelevantStarters: Player[] = injuredPlayers.filter(player => 
+        (player.team && player.position && player.depth_chart_order === 1
+            && (FANTASY_POSITIONS as readonly string[]).includes(player.position)))
+            .slice(0, limit);
+
+        return injuryRelevantStarters;
+    }
+
+    // Returns all free agent `player_id` in the league.
+    async getFreeAgents(leagueId: string): Promise<string[]> {
+        const rosters: Roster[] = await this.getRosters(leagueId);
+        const rosteredPlayers = new Set<string>();
+
+        for (const roster of rosters) {
+            const playersOnRoster = roster.players;
+            for (const playerId of playersOnRoster) {
+                rosteredPlayers.add(playerId);
+            }
+        }
+        const allPlayerIds = Object.keys(await this.getPlayers());
+        const freeAgents = allPlayerIds.filter(playerId => !rosteredPlayers.has(playerId));
+        return freeAgents;
+    }
+
+
+    // async getSnapPercentage()
+    // async getPlayerNews()
+
 
     // Uses Sleeper private API, undocumented, may break without notice.
 

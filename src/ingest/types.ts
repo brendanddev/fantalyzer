@@ -85,7 +85,10 @@ export interface PlayerWeekEntry {
 export type WeeklyEntries = Record<string, PlayerWeekEntry | null>;
 
 // Roster slots Sleeper reports in fantasy_positions.
-export type FantasyPosition = "QB" | "RB" | "WR" | "TE" | "K" | "DEF";
+// The array is for iterating and runtime checks, the type is derived from it
+// so the two cannot drift apart.
+export const FANTASY_POSITIONS = ["QB", "RB", "WR", "TE", "K", "DEF"] as const;
+export type FantasyPosition = typeof FANTASY_POSITIONS[number];
 
 // Describes the settings type nested in each roster.
 export interface RosterSettings {

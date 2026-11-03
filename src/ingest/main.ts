@@ -8,15 +8,12 @@ const playerMap = await client.getPlayers();
 const PUKA_PLAYER_ID = '9493';
 
 if (emotiLeague) {
+    const snapPercentage = await client.getSnapPercentageForWeek(PUKA_PLAYER_ID, 8);
+    console.log(snapPercentage);
 
-    const injuredStarters = await client.getInjuredStarters(10);
-    console.log(injuredStarters);
-
-    const freeAgents = await client.getFreeAgents(emotiLeague);
-    console.log(freeAgents);
-
-    const puka = await client.getPlayerById(PUKA_PLAYER_ID);
-    console.log(puka);
+    const pukaStats = await client.getPlayerStatsByWeek(PUKA_PLAYER_ID);
+    const week8 = pukaStats["8"];
+    console.log(week8);
 
 } else {
     console.log(`Invalid User ID`);

@@ -24,6 +24,7 @@ export interface Roster {
     roster_id: number;
     players: string[];
     starters: string[];
+    reserve: string[] | null;
     settings: RosterSettings;
 }
 

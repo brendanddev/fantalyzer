@@ -1,15 +1,19 @@
 import { SLEEPER_LEAGUES } from "../config/config.js";
 import { SleeperClient } from "./client.js";
 
+const PUKA_PLAYER_ID = '9493';
+
 const client = new SleeperClient();
 const emotiLeague = SLEEPER_LEAGUES["emoticon"];
 const playerMap = await client.getPlayers();
 
-const PUKA_PLAYER_ID = '9493';
 
 if (emotiLeague) {
-    const state = await client.getNflState();
-    console.log(state);
+    const rosters = await client.getRosters(emotiLeague);
+    console.log(rosters);
+
+    // const state = await client.getNflState();
+    // console.log(state);
 
     // const leagueStandings = await client.getLeagueStandings(emotiLeague);
     // console.log(leagueStandings);

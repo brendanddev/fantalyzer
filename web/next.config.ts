@@ -10,8 +10,6 @@ const nextConfig: NextConfig = {
   experimental: {
     agentFeedback: true,
   },
-  cacheComponents: true,
-  partialPrefetching: true,
   outputFileTracingRoot: repoRoot,
   turbopack: {
     root: repoRoot,

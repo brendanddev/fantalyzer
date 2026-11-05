@@ -1,8 +1,11 @@
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type User, type WeeklyEntries } from "./types.js";
 import { combinePoints, compareByStandings } from "./util.js";
 
-const PLAYERS_FILE = "data/players.json";
+const DATA_DIR = process.env.FANTALYZER_DATA_DIR ?? "data";
+const PLAYERS_FILE = join(DATA_DIR, "players.json");
 const PLAYERS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const SLEEPER_API = "https://api.sleeper.app/v1";
@@ -28,7 +31,8 @@ export class SleeperClient {
     // and stores in memory.
     private async refreshPlayerCache(): Promise<Record<string, Player>> {
         const players = await this.get<Record<string, Player>>("players/nfl");
-        await writeFile("data/players.json", JSON.stringify(players), "utf-8");
+        await mkdir(dirname(PLAYERS_FILE), { recursive: true });
+        await writeFile(PLAYERS_FILE, JSON.stringify(players), "utf-8");
         this.playerCache = players;
         return players;
     }

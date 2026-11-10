@@ -128,3 +128,16 @@ export interface MatchupEntry {
     starters: string[];
     players_points: Record<string, number>;
 }
+
+// Derived. One team with its owners name, record, and players resolved from
+// IDs into three groups.
+export interface RosterView {
+    roster_id: number;
+    team_name: string;
+    wins: number;
+    losses: number;
+    ties: number;
+    starters: Player[];
+    bench: Player[];
+    reserve: Player[];
+}

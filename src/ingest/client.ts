@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type User, type WeeklyEntries } from "./types.js";
-import { combinePoints, compareByStandings } from "./util.js";
+import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterView, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type User, type WeeklyEntries } from "./types.js";
+import { combinePoints, compareByStandings, getBenchIds } from "./util.js";
 
 const DATA_DIR = process.env.FANTALYZER_DATA_DIR ?? "data";
 const PLAYERS_FILE = join(DATA_DIR, "players.json");
@@ -68,6 +68,51 @@ export class SleeperClient {
         return this.get<User[]>(`league/${leagueId}/users`);
     }
 
+    // Lookup from user_id to display_name for everyone in the league.
+    private async getUserNames(leagueId: string): Promise<Record<string, string>> {
+        const users = await this.getAllUsers(leagueId);
+        const userNames: Record<string, string> = {};
+        users.forEach(user => userNames[user.user_id] = user.display_name);
+        return userNames;
+    }
+
+    // Turns player IDs into Player objects. IDs not in the map are dropped,
+    // so the result can be shorter than the input.
+    private async resolvePlayers(ids: string[]): Promise<Player[]> {
+        const players: Player[] = [];
+        const playerMap = await this.getPlayers();
+
+        for (const id of ids) {
+            const player = playerMap[id];
+            if (player) {
+                players.push(player);
+            }
+        }
+        return players;
+    }
+    
+    async getLeagueRosters(leagueId: string): Promise<RosterView[]> {
+        const rosterViews: RosterView[] = [];
+        const rosters = await this.getRosters(leagueId);
+        const userNames = await this.getUserNames(leagueId);
+
+        for (const roster of rosters) {
+            const rosterView: RosterView = {
+                roster_id: roster.roster_id,
+                team_name: userNames[roster.owner_id] ?? "(unknown)",
+                wins: roster.settings.wins,
+                losses: roster.settings.losses,
+                ties: roster.settings.ties,
+                starters: await this.resolvePlayers(roster.starters),
+                bench: await this.resolvePlayers(getBenchIds(roster)),
+                reserve: await this.resolvePlayers(roster.reserve ?? []),
+            }
+
+            rosterViews.push(rosterView);
+        }
+        return rosterViews;
+    }
+
     async getPlayers(forceRefresh = false): Promise<Record<string, Player>> {
         if (forceRefresh) return this.refreshPlayerCache();
         if (this.playerCache) return this.playerCache;
@@ -105,10 +150,7 @@ export class SleeperClient {
     }
 
     async getLeagueStandings(leagueId: string): Promise<StandingsEntry[]> {
-        const users = await this.getAllUsers(leagueId);
-        const userNames: Record<string, string> = {};
-        users.forEach(user => userNames[user.user_id] = user.display_name);
-    
+        const userNames = await this.getUserNames(leagueId);
         const rosters = await this.getRosters(leagueId);
         const orderedRosters = rosters.sort(compareByStandings);
 
@@ -143,7 +185,7 @@ export class SleeperClient {
 
     async getInjuredStarters(limit: number): Promise<Player[]> {
         const injuredPlayers: Player[] = await this.getInjuryRelevantPlayers();
-        const injuryRelevantStarters: Player[] = injuredPlayers.filter(player => 
+        const injuryRelevantStarters: Player[] = injuredPlayers.filter(player =>
         (player.team && player.position && player.depth_chart_order === 1
             && (FANTASY_POSITIONS as readonly string[]).includes(player.position)))
             .slice(0, limit);

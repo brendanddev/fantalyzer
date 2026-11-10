@@ -1,6 +1,4 @@
-import { SleeperClient } from "@fantalyzer/ingest/client.js";
-
-const client = new SleeperClient();
+import { client } from "@/lib/client";
 
 export default async function NflStateBanner() {
     const state = await client.getNflState();

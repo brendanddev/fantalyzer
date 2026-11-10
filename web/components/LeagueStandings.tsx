@@ -1,8 +1,4 @@
-import { SleeperClient } from "@fantalyzer/ingest/client.js";
-import { SLEEPER_LEAGUES } from "@fantalyzer/config/config.js";
-
-const client = new SleeperClient();
-const leagueId = SLEEPER_LEAGUES["emoticon"];
+import { client, leagueId } from "@/lib/client";
 
 export default async function LeagueStandings() {
     const leagueStandings = await client.getLeagueStandings(leagueId);

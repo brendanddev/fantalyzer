@@ -34,6 +34,7 @@ export default async function LeagueStandings() {
                     ))}
                 </tbody>
             </table>
+            <hr />
         </div>
     )
 }

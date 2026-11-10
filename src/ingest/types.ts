@@ -141,3 +141,9 @@ export interface RosterView {
     bench: Player[];
     reserve: Player[];
 }
+
+// Derived. One player and its current trending count.
+export interface TrendingView {
+    player: Player;
+    count: number;
+}

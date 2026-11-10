@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterView, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type User, type WeeklyEntries } from "./types.js";
+import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterView, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type TrendingView, type User, type WeeklyEntries } from "./types.js";
 import { combinePoints, compareByStandings, getBenchIds } from "./util.js";
 
 const DATA_DIR = process.env.FANTALYZER_DATA_DIR ?? "data";
@@ -90,7 +90,7 @@ export class SleeperClient {
         }
         return players;
     }
-    
+
     async getLeagueRosters(leagueId: string): Promise<RosterView[]> {
         const rosterViews: RosterView[] = [];
         const rosters = await this.getRosters(leagueId);
@@ -147,6 +147,25 @@ export class SleeperClient {
         const playerMap = await this.getPlayers();
         const trendingPlayers = await this.getTrendingPlayers("add", 24, limit);
         return trendingPlayers.filter(entry => playerMap[entry.player_id]?.fantasy_positions?.includes(position));
+    }
+
+    // Trending adds or drops with the player attached, ordered by count descending.
+    // Entries whose player isn't in the dump are dropped.
+    async getTrendingView(type: "add" | "drop", lookbackHours = 24, limit = 10): Promise<TrendingView[]> {
+        const views: TrendingView[] = [];
+        const playerMap = await this.getPlayers();
+        const trendingPlayers = await this.getTrendingPlayers(type, lookbackHours, limit);
+        for (const trendingPlayer of trendingPlayers) {
+            const player = playerMap[trendingPlayer.player_id];
+            if (player) {
+                const view: TrendingView = {
+                    player,
+                    count: trendingPlayer.count
+                }
+                views.push(view);
+            }
+        }
+        return views;
     }
 
     async getLeagueStandings(leagueId: string): Promise<StandingsEntry[]> {

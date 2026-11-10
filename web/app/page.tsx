@@ -1,6 +1,7 @@
 import NflStateBanner from "@/components/NflStateBanner";
 import LeagueStandings from "@/components/LeagueStandings";
 import LeagueRosters from "@/components/LeagueRosters";
+import TrendingPlayers from "@/components/TrendingPlayers";
 
 export default async function Home() {
 	return (
@@ -9,6 +10,7 @@ export default async function Home() {
 			<NflStateBanner />
 			<LeagueStandings />
 			<LeagueRosters />
+			<TrendingPlayers type="add" lookback={24} limit={10} />
 		</main>
 	);
 }

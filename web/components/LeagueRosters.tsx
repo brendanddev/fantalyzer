@@ -5,6 +5,7 @@ export default async function LeagueRosters() {
 
     return (
         <div><h4>League Rosters</h4>
+            <hr />
 
             {rosters.map(roster => (
                 <div key={roster.roster_id}>
@@ -32,6 +33,7 @@ export default async function LeagueRosters() {
                     </ul>
                 </div>
             ))}
+            <hr />
         </div>
     );
 }

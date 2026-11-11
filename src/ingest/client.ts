@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterView, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type TrendingView, type User, type WeeklyEntries } from "./types.js";
+import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type FreeAgentView, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterView, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type TrendingView, type User, type WeeklyEntries, type WeeklyLeaderEntry } from "./types.js";
 import { combinePoints, compareByStandings, getBenchIds } from "./util.js";
 
 const DATA_DIR = process.env.FANTALYZER_DATA_DIR ?? "data";
@@ -267,10 +267,36 @@ export class SleeperClient {
         return this.get<WeeklyEntries>(`projections/nfl/player/${playerId}?season_type=regular&season=2026&grouping=week`, SLEEPER_PRIVATE_API);
     }
 
-    async getWeeklyLeaders(season: number, week: number, positions: FantasyPosition[]) {
+    async getWeeklyLeaders(season: number, week: number, positions: FantasyPosition[]): Promise<WeeklyLeaderEntry[]> {
         const posParams = positions.map(pos => `position[]=${pos}`).join('&');
         const query = `?season_type=regular&${posParams}&order_by=pts_ppr`;
-        return this.get(`stats/nfl/${season}/${week}${query}`, SLEEPER_PRIVATE_API);
+        return this.get<WeeklyLeaderEntry[]>(`stats/nfl/${season}/${week}${query}`, SLEEPER_PRIVATE_API);
+    }
+
+    // Available players ranked by what they actually scored in a given week.
+    // Crosses the weekly leaders list with the leagues free agents, keeping the leaders points order.
+    async getTopFreeAgents(leagueId: string, season: number, week: number, positions: FantasyPosition[], limit?: number): Promise<FreeAgentView[]> {
+        const views: FreeAgentView[] = [];
+        const weeklyLeaders = await this.getWeeklyLeaders(season, week, positions);
+        const freeAgents = await this.getFreeAgents(leagueId);
+        const freeAgentIds = new Set(freeAgents.map(p => p.player_id));
+
+        for (const leader of weeklyLeaders) {
+            if (freeAgentIds.has(leader.player_id)) {
+                const view: FreeAgentView = {
+                    player_id: leader.player_id,
+                    player_name: `${leader.player.first_name} ${leader.player.last_name}`,
+                    position: leader.player.position,
+                    team: leader.player.team,
+                    fantasy_points: leader.stats.pts_ppr ?? 0,
+                    position_rank: leader.stats.pos_rank_ppr ?? 999,
+                };
+                views.push(view);
+
+                if (limit && views.length >= limit) break;
+            }
+        }
+        return views;
     }
 
 }

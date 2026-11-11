@@ -147,3 +147,38 @@ export interface TrendingView {
     player: Player;
     count: number;
 }
+
+// The player summary nested inside a weekly leader entry.
+// No player_id, thats on the entry itself.
+export interface EmbeddedPlayer {
+    first_name: string;
+    last_name: string;
+    position: string;
+    team: string;
+    fantasy_positions: string[];
+    injury_status: string | null;
+}
+
+// One players week from the bulk stats endpoint, ranked by pts_ppr.
+export interface WeeklyLeaderEntry {
+    player_id: string;
+    week: number;
+    season: string;
+    team: string;
+    opponent: string | null;
+    game_id: string;
+    date: string;
+    stats: Stats;
+    player: EmbeddedPlayer;
+}
+
+// Derived. An available players line from one week, ranked by PPR points.
+// position_rank is 999 when Sleeper has them unranked.
+export interface FreeAgentView {
+    player_id: string;
+    player_name: string;
+    position: string;
+    team: string;
+    fantasy_points: number;
+    position_rank: number;
+}

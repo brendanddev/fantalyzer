@@ -31,3 +31,7 @@ fantalyzer/
 │   ├── config/         # App configuration
 │   ├── constants.ts    # Constants used throughout the app
 ```
+
+## Coming Soon
+
+TBD...

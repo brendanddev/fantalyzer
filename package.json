@@ -1,6 +1,6 @@
 {
   "name": "fantalyzer",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "A personal fantasy football edge system.",
   "main": "index.js",
   "scripts": {
@@ -9,9 +9,6 @@
     "rebuild": "npm run clean && tsc",
     "watch": "tsc --watch --preserveWatchOutput",
     "ingest": "tsx src/ingest/main.ts",
-    "migrate:create": "node-pg-migrate create -j ts --migrations-dir src/db/migrations",
-    "migrate:up": "node-pg-migrate up --migrations-dir src/db/migrations",
-    "migrate:down": "node-pg-migrate down --migrations-dir src/db/migrations",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

@@ -8,10 +8,12 @@ const emotiLeague = SLEEPER_LEAGUES["emoticon"];
 const bLeague = SLEEPER_LEAGUES["bagot"];
 const playerMap = await client.getPlayers();
 
-
 if (bLeague) {
-    const trendingPlayers = await client.getTopFreeAgents(bLeague, 2026, 9, ['WR'], 10);
-    console.log(trendingPlayers);
+    const playerSeasonViews = await client.getPlayerSeasonView(PUKA_PLAYER_ID, 2026, 9);
+    console.log(playerSeasonViews);
+
+    // const trendingPlayers = await client.getTopFreeAgents(bLeague, 2026, 9, ['WR'], 10);
+    // console.log(trendingPlayers);
 
     // const weeklyLeaders = await client.getWeeklyLeaders(2026, 9, ['RB']);
     // console.log(weeklyLeaders);

@@ -47,7 +47,7 @@ export interface Player {
     status: string | null;
 }
 
-// Derived, not an API response: a Roster with its IDs resolved to Players.
+// Derived, not an API response. A Roster with its IDs resolved to Players.
 export interface RosterWithPlayers {
     roster_id: number;
     owner_id: string;
@@ -60,7 +60,7 @@ export interface TrendingEntry {
     count: number;
 }
 
-// One teams depth chart. Keys are position codes (QB, RB, WR1, LCB);
+// One teams depth chart. Keys are position codes (QB, RB, WR1, LCB),
 // values are player IDs ordered starter first.
 export type DepthChart = Record<string, string[]>;
 
@@ -68,7 +68,7 @@ export type DepthChart = Record<string, string[]>;
 // so no fixed interface is possible.
 export type Stats = Record<string, number>;
 
-// One games stats or projections for one player. Same shape for both;
+// One games stats or projections for one player. Same shape for both,
 // category says which.
 export interface PlayerWeekEntry {
     player_id: string;
@@ -104,7 +104,7 @@ export interface RosterSettings {
     wins: number;
 }
 
-// Derived, not an API response: a singular entry in the leagues standings.
+// Derived, not an API response. A singular entry in the leagues standings.
 export interface StandingsEntry {
     rank: number;
     team_name: string;
@@ -181,4 +181,14 @@ export interface FreeAgentView {
     team: string;
     fantasy_points: number;
     position_rank: number;
+}
+
+// Derived. One week of a players season. What they were projected for, 
+// what they actually scored, and how much they played.
+export interface PlayerWeekView {
+    week: number;
+    opponent: string | null;
+    actual_points: number | null;
+    projected_points: number | null;
+    snap_percentage: number | null;
 }

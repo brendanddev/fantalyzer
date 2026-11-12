@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type FreeAgentView, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type Roster, type RosterView, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type TrendingView, type User, type WeeklyEntries, type WeeklyLeaderEntry } from "./types.js";
+import { FANTASY_POSITIONS, type DepthChart, type FantasyPosition, type FreeAgentView, type League, type LeagueStandings, type MatchupEntry, type NflState, type Player, type PlayerWeekEntry, type PlayerWeekView, type Roster, type RosterView, type RosterWithPlayers, type StandingsEntry, type TrendingEntry, type TrendingView, type User, type WeeklyEntries, type WeeklyLeaderEntry } from "./types.js";
 import { combinePoints, compareByStandings, getBenchIds } from "./util.js";
 
 const DATA_DIR = process.env.FANTALYZER_DATA_DIR ?? "data";
@@ -91,28 +91,6 @@ export class SleeperClient {
         return players;
     }
 
-    async getLeagueRosters(leagueId: string): Promise<RosterView[]> {
-        const rosterViews: RosterView[] = [];
-        const rosters = await this.getRosters(leagueId);
-        const userNames = await this.getUserNames(leagueId);
-
-        for (const roster of rosters) {
-            const rosterView: RosterView = {
-                roster_id: roster.roster_id,
-                team_name: userNames[roster.owner_id] ?? "(unknown)",
-                wins: roster.settings.wins,
-                losses: roster.settings.losses,
-                ties: roster.settings.ties,
-                starters: await this.resolvePlayers(roster.starters),
-                bench: await this.resolvePlayers(getBenchIds(roster)),
-                reserve: await this.resolvePlayers(roster.reserve ?? []),
-            }
-
-            rosterViews.push(rosterView);
-        }
-        return rosterViews;
-    }
-
     async getPlayers(forceRefresh = false): Promise<Record<string, Player>> {
         if (forceRefresh) return this.refreshPlayerCache();
         if (this.playerCache) return this.playerCache;
@@ -147,41 +125,6 @@ export class SleeperClient {
         const playerMap = await this.getPlayers();
         const trendingPlayers = await this.getTrendingPlayers("add", 24, limit);
         return trendingPlayers.filter(entry => playerMap[entry.player_id]?.fantasy_positions?.includes(position));
-    }
-
-    // Trending adds or drops with the player attached, ordered by count descending.
-    // Entries whose player isn't in the dump are dropped.
-    async getTrendingView(type: "add" | "drop", lookbackHours = 24, limit = 10): Promise<TrendingView[]> {
-        const views: TrendingView[] = [];
-        const playerMap = await this.getPlayers();
-        const trendingPlayers = await this.getTrendingPlayers(type, lookbackHours, limit);
-        for (const trendingPlayer of trendingPlayers) {
-            const player = playerMap[trendingPlayer.player_id];
-            if (player) {
-                const view: TrendingView = {
-                    player,
-                    count: trendingPlayer.count
-                }
-                views.push(view);
-            }
-        }
-        return views;
-    }
-
-    async getLeagueStandings(leagueId: string): Promise<StandingsEntry[]> {
-        const userNames = await this.getUserNames(leagueId);
-        const rosters = await this.getRosters(leagueId);
-        const orderedRosters = rosters.sort(compareByStandings);
-
-        return orderedRosters.map((roster, idx) => ({
-            rank: idx + 1,
-            team_name: userNames[roster.owner_id] ?? "(unknown)",
-            wins: roster.settings.wins,
-            losses: roster.settings.losses,
-            ties: roster.settings.ties,
-            points: combinePoints(roster.settings.fpts, roster.settings.fpts_decimal),
-            points_against: combinePoints(roster.settings.fpts_against, roster.settings.fpts_against_decimal)
-        }));
     }
 
     async getWeeklyMatchups(leagueId: string, week: number): Promise<MatchupEntry[]> {
@@ -273,6 +216,65 @@ export class SleeperClient {
         return this.get<WeeklyLeaderEntry[]>(`stats/nfl/${season}/${week}${query}`, SLEEPER_PRIVATE_API);
     }
 
+
+    // Assembled views for the dashboard. No joins left for the caller.
+
+    async getLeagueStandings(leagueId: string): Promise<StandingsEntry[]> {
+        const userNames = await this.getUserNames(leagueId);
+        const rosters = await this.getRosters(leagueId);
+        const orderedRosters = rosters.sort(compareByStandings);
+
+        return orderedRosters.map((roster, idx) => ({
+            rank: idx + 1,
+            team_name: userNames[roster.owner_id] ?? "(unknown)",
+            wins: roster.settings.wins,
+            losses: roster.settings.losses,
+            ties: roster.settings.ties,
+            points: combinePoints(roster.settings.fpts, roster.settings.fpts_decimal),
+            points_against: combinePoints(roster.settings.fpts_against, roster.settings.fpts_against_decimal)
+        }));
+    }
+
+    // Trending adds or drops with the player attached, ordered by count descending.
+    // Entries whose player isn't in the dump are dropped.
+    async getTrendingView(type: "add" | "drop", lookbackHours = 24, limit = 10): Promise<TrendingView[]> {
+        const views: TrendingView[] = [];
+        const playerMap = await this.getPlayers();
+        const trendingPlayers = await this.getTrendingPlayers(type, lookbackHours, limit);
+        for (const trendingPlayer of trendingPlayers) {
+            const player = playerMap[trendingPlayer.player_id];
+            if (player) {
+                const view: TrendingView = {
+                    player,
+                    count: trendingPlayer.count
+                }
+                views.push(view);
+            }
+        }
+        return views;
+    }
+
+    async getLeagueRosters(leagueId: string): Promise<RosterView[]> {
+        const rosterViews: RosterView[] = [];
+        const rosters = await this.getRosters(leagueId);
+        const userNames = await this.getUserNames(leagueId);
+
+        for (const roster of rosters) {
+            const rosterView: RosterView = {
+                roster_id: roster.roster_id,
+                team_name: userNames[roster.owner_id] ?? "(unknown)",
+                wins: roster.settings.wins,
+                losses: roster.settings.losses,
+                ties: roster.settings.ties,
+                starters: await this.resolvePlayers(roster.starters),
+                bench: await this.resolvePlayers(getBenchIds(roster)),
+                reserve: await this.resolvePlayers(roster.reserve ?? []),
+            };
+            rosterViews.push(rosterView);
+        }
+        return rosterViews;
+    }
+
     // Available players ranked by what they actually scored in a given week.
     // Crosses the weekly leaders list with the leagues free agents, keeping the leaders points order.
     async getTopFreeAgents(leagueId: string, season: number, week: number, positions: FantasyPosition[], limit?: number): Promise<FreeAgentView[]> {
@@ -298,5 +300,33 @@ export class SleeperClient {
         }
         return views;
     }
+
+    // One entry per week through `throughWeek`, pairing a players projection with
+    // what they actually scored. Weeks they missed come back will nulls.
+    async getPlayerSeasonView(playerId: string, season: number, throughWeek: number): Promise<PlayerWeekView[]> {
+        const views: PlayerWeekView[] = [];
+        const playerWeekStats = await this.getPlayerStatsByWeek(playerId);
+        const playerWeekProjections = await this.getPlayerProjectionsByWeek(playerId);
+
+        for (let week = 1; week <= throughWeek; week++) {
+            const currWeekStats = playerWeekStats[String(week)];
+            const currWeekProjections = playerWeekProjections[String(week)];
+
+            const offSnaps = currWeekStats?.stats?.off_snp;
+            const teamSnaps = currWeekStats?.stats?.tm_off_snp;
+
+            const view: PlayerWeekView = {
+                week: week,
+                opponent: currWeekStats?.opponent ?? null,
+                actual_points: currWeekStats?.stats?.pts_ppr ?? null,
+                projected_points: currWeekProjections?.stats?.pts_ppr ?? null,
+                snap_percentage: offSnaps !== undefined && teamSnaps ? offSnaps / teamSnaps : null
+            };
+            views.push(view);
+        }
+        return views;
+    }
+
+
 
 }

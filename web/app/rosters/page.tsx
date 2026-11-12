@@ -1,6 +1,5 @@
 import LeagueRosters from "@/components/LeagueRosters";
 
-
 export default async function Rosters() {
 	return (
 		<main className="p-8">

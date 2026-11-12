@@ -226,6 +226,8 @@ export class SleeperClient {
 
         return orderedRosters.map((roster, idx) => ({
             rank: idx + 1,
+            roster_id: roster.roster_id,
+            owner_id: roster.owner_id,
             team_name: userNames[roster.owner_id] ?? "(unknown)",
             wins: roster.settings.wins,
             losses: roster.settings.losses,
@@ -262,6 +264,7 @@ export class SleeperClient {
         for (const roster of rosters) {
             const rosterView: RosterView = {
                 roster_id: roster.roster_id,
+                owner_id: roster.owner_id,
                 team_name: userNames[roster.owner_id] ?? "(unknown)",
                 wins: roster.settings.wins,
                 losses: roster.settings.losses,

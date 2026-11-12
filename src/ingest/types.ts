@@ -107,6 +107,8 @@ export interface RosterSettings {
 // Derived, not an API response. A singular entry in the leagues standings.
 export interface StandingsEntry {
     rank: number;
+    roster_id: number;
+    owner_id: string;
     team_name: string;
     wins: number;
     losses: number;
@@ -133,6 +135,7 @@ export interface MatchupEntry {
 // IDs into three groups.
 export interface RosterView {
     roster_id: number;
+    owner_id: string;
     team_name: string;
     wins: number;
     losses: number;

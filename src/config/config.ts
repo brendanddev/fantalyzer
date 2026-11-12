@@ -11,3 +11,5 @@ for (const entry of (process.env.SLEEPER_LEAGUES ?? "").split(",")) {
     if (!name || !id) throw new Error(`Bad league entry: "${entry}"`);
     SLEEPER_LEAGUES[name] = id;
 }
+
+export const SLEEPER_USER_ID = process.env.SLEEPER_USER_ID ?? "";

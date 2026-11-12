@@ -6,7 +6,7 @@ export default function WaiverWire() {
         <main className="p-8">
             <h1>Waiver Wire</h1>
             <TrendingPlayers type="add" lookback={24} limit={10} />
-            <TopFreeAgents week={9} positions={["WR"]} limit={10} />
+            <TopFreeAgents week={9} positions={["QB", "RB", "WR", "TE"]} limit={10} />
         </main>
     );
 }

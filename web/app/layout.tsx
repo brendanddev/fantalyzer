@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Nav from "@/components/Nav";
+import NflStateBanner from "@/components/NflStateBanner";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
 	title: "Fantalyzer",
@@ -9,7 +12,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
 	return (
 		<html lang="en">
-			<body>{children}</body>
+			<body>
+				<Nav />
+				<NflStateBanner />
+				{children}
+				<Footer />
+			</body>
 		</html>
 	);
 }

@@ -1,26 +1,103 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+	--background: #0f1115;
+	--foreground: #e4e4e7;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+	background: var(--background);
+	color: var(--foreground);
+	font-family: system-ui, sans-serif;
+}
+
+a {
+	color: inherit;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+th,
+td {
+	padding: 0.4rem 0.75rem;
+	text-align: left;
+}
+
+th {
+	color: #a1a1aa;
+	font-weight: 500;
+	font-size: 0.85rem;
+}
+
+tr+tr {
+	border-top: 1px solid #27272a;
+}
+
+h1 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+h2 {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+h4 {
+	font-size: 1.1rem;
+	font-weight: 600;
+	margin: 1.5rem 0 0.5rem;
+}
+
+h5 {
+	font-weight: 600;
+	margin: 1rem 0 0.25rem;
+}
+
+h6 {
+	color: #a1a1aa;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	margin: 0.75rem 0 0.25rem;
+}
+
+ul {
+	margin-bottom: 0.5rem;
+}
+
+li {
+	padding: 0.15rem 0;
+}
+
+hr {
+	border-color: #27272a;
+	margin: 1.5rem 0;
+}
+
+nav {
+	display: flex;
+	gap: 1.5rem;
+	padding: 1rem 2rem;
+	border-bottom: 1px solid #27272a;
+}
+
+nav a:hover {
+	color: #fff;
+}
+
+footer {
+	padding: 2rem;
+	border-top: 1px solid #27272a;
+	color: #71717a;
+	font-size: 0.85rem;
+	margin-top: 3rem;
 }

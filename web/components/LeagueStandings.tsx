@@ -5,7 +5,7 @@ export default async function LeagueStandings() {
 
     return (
         <div>
-            <h4>League Standings</h4>
+            <h4>Standings</h4>
 
             <table>
                 <thead>
